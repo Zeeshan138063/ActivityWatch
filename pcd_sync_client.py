@@ -27,17 +27,20 @@ logger = logging.getLogger("pcd_sync_client")
 # Set PCD_APP_SECRET before running pyinstaller — one value per environment.
 # End users never see or configure this; it's compiled into the binary.
 # ---------------------------------------------------------------------------
-APP_SECRET = os.environ.get("PCD_APP_SECRET", "")
+APP_SECRET = os.environ.get("PCD_APP_SECRET", "ACTIVITYWATCH_APP_SECRET")
+
 
 # Known environments → base URLs (no trailing slash)
 ENVIRONMENTS = {
     "local": "http://127.0.0.1:8005",
-    "dev":   "https://api-dev.prescribingcaredirect.co.uk",
-    "qa":    "https://api-qa.prescribingcaredirect.co.uk",
-    "prod":  "https://api.prescribingcaredirect.co.uk",
+    "dev":   "https://api.dev.prescribingcaredirect.co.uk",
+    "qa":    "https://api.qa.prescribingcaredirect.co.uk",
+    "prod":  "https://api.qa.prescribingcaredirect.co.uk",
 }
-ACTIVITY_SYNC_PATH = "/api/core/v1/activity-sync"
-USER_VALIDATE_PATH = "/api/users/verify-email"
+ACTIVITY_SYNC_PATH  = "/api/core/v1/activity-sync"
+USER_VALIDATE_PATH  = "/api/users/verify-email"
+ADMIN_VERIFY_PATH   = "/api/users/admin/verify"
+UPDATE_EMAIL_PATH   = "/api/users/update-activity-email"
 DEFAULT_ENV = "prod"
 
 AW_SERVER_URL = "http://localhost:{port}/api/0"
@@ -148,6 +151,58 @@ def validate_pcd_email(base_url: str, email: str) -> tuple[bool, str]:
     except Exception as e:
         logger.warning(f"Email validation error: {e} — skipping check.")
         return True, ""
+
+
+def verify_admin_credentials(base_url: str, username: str, password: str) -> tuple[bool, str]:
+    """Authenticate an admin user against the PCD backend."""
+    url = base_url + ADMIN_VERIFY_PATH
+    try:
+        res = requests.post(
+            url,
+            json={"username": username, "password": password},
+            headers=_auth_headers(),
+            timeout=10,
+        )
+        if res.status_code == 200:
+            return True, ""
+        if res.status_code in (401, 403):
+            return False, "Invalid admin credentials."
+        try:
+            detail = res.json().get("detail") or res.json().get("message") or ""
+        except Exception:
+            detail = ""
+        return False, detail or f"Admin verify failed (HTTP {res.status_code})."
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+        return False, "Cannot reach PCD API. Check your connection."
+    except Exception as e:
+        return False, f"Unexpected error: {e}"
+
+
+def update_activity_email(base_url: str, existing_email: str, new_email: str) -> tuple[bool, str]:
+    """Update the activity-sync email via the PCD backend, then update local config."""
+    url = base_url + UPDATE_EMAIL_PATH
+    try:
+        res = requests.post(
+            url,
+            json={"existing_email": existing_email, "new_email": new_email},
+            headers=_auth_headers(),
+            timeout=10,
+        )
+        if res.status_code == 200:
+            save_user_config({"pcd_user_email": new_email})
+            logger.info(f"[admin] Activity email updated: {existing_email} → {new_email}")
+            return True, ""
+        if res.status_code == 404:
+            return False, f"No PCD account found for '{existing_email}'."
+        try:
+            detail = res.json().get("detail") or res.json().get("message") or ""
+        except Exception:
+            detail = ""
+        return False, detail or f"Update failed (HTTP {res.status_code})."
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+        return False, "Cannot reach PCD API. Check your connection."
+    except Exception as e:
+        return False, f"Unexpected error: {e}"
 
 
 def _show_email_dialog(error_message: str | None = None) -> str | None:
@@ -396,6 +451,9 @@ def sync_once(api_url: str, aw_url: str, pcd_user_email: str | None) -> bool:
 
         logger.debug(f"Fetching events for {bucket_id} since {last_sync}")
         events = fetch_new_events(aw_url, bucket_id, last_sync)
+
+        if bucket_id.startswith("aw-watcher-afk_"):
+            events = [e for e in events if e.get("data", {}).get("status") == "afk"]
 
         if events:
             events.sort(key=lambda x: x["timestamp"])

@@ -178,6 +178,19 @@ aw_notify_a = None if skip_aw_notify else build_analysis(
     "aw_notify", aw_notify_location, hiddenimports=["desktop_notifier.resources"]
 )
 
+aw_pcd_sync_a = Analysis(
+    ["pcd_sync_client.py"],
+    pathex=[],
+    binaries=[],
+    datas=[],
+    hiddenimports=[],
+    hookspath=[],
+    runtime_hooks=[],
+    excludes=[],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+)
+
 # https://pythonhosted.org/PyInstaller/spec-files.html#multipackage-bundles
 # MERGE takes a bit weird arguments, it wants tuples which consists of
 # the analysis paired with the script name and the bin name
@@ -190,6 +203,7 @@ merge_args = [
 ]
 if aw_notify_a is not None:
     merge_args.append((aw_notify_a, "aw-notify", "aw-notify"))
+merge_args.append((aw_pcd_sync_a, "aw-pcd-sync", "aw-pcd-sync"))
 
 MERGE(*merge_args)
 
@@ -216,6 +230,9 @@ awi_coll = build_collect(aw_watcher_input_a, "aw-watcher-input")
 # aw-notify (only if Python package exists)
 aw_notify_coll = build_collect(aw_notify_a, "aw-notify") if aw_notify_a is not None else None
 
+# aw-pcd-sync
+aw_pcd_sync_coll = build_collect(aw_pcd_sync_a, "aw-pcd-sync")
+
 if platform.system() == "Darwin":
     bundle_args = [
         awq_coll,
@@ -223,6 +240,7 @@ if platform.system() == "Darwin":
         aww_coll,
         awa_coll,
         awi_coll,
+        aw_pcd_sync_coll,
     ]
     if aw_notify_coll is not None:
         bundle_args.append(aw_notify_coll)

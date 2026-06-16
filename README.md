@@ -266,6 +266,82 @@ There are lots of other watchers for ActivityWatch which can track more types of
 
 <span><img src="https://raw.githubusercontent.com/ActivityWatch/activitywatch/master/diagram.svg" width="60%"></span>
 
+## PCD Build Instructions
+
+This section covers building the PCD-customised ActivityWatch distribution, which bundles the `aw-pcd-sync` client that continuously syncs activity data to the Prescribing Care Direct API.
+
+### Prerequisites
+
+```bash
+pip install poetry pyinstaller dmgbuild
+```
+
+Make sure all submodules are initialised:
+
+```bash
+git submodule update --init --recursive
+```
+
+### Development run (no build)
+
+Test the sync client directly against a running ActivityWatch instance:
+
+```bash
+# Local PCD backend
+PCD_APP_SECRET=your-secret venv/bin/python pcd_sync_client.py --env local
+
+# Dev environment
+PCD_APP_SECRET=your-secret venv/bin/python pcd_sync_client.py --env dev
+
+# Re-run first-time email setup
+PCD_APP_SECRET=your-secret venv/bin/python pcd_sync_client.py --env local --setup
+```
+
+### Build the app bundle
+
+Step 1 — compile all Python submodules:
+
+```bash
+make build
+```
+
+Step 2 — bundle with PyInstaller, baking the app secret and target environment into the binary:
+
+```bash
+# Production build
+PCD_APP_SECRET=your-secret PCD_ENV=prod venv/bin/pyinstaller --clean --noconfirm aw.spec
+
+# Dev build
+PCD_APP_SECRET=your-secret PCD_ENV=dev venv/bin/pyinstaller --clean --noconfirm aw.spec
+
+# QA build
+PCD_APP_SECRET=your-secret PCD_ENV=qa venv/bin/pyinstaller --clean --noconfirm aw.spec
+
+# Local build (points to http://127.0.0.1:8005)
+PCD_APP_SECRET=your-secret PCD_ENV=local venv/bin/pyinstaller --clean --noconfirm aw.spec
+```
+
+The resulting `ActivityWatch.app` is placed in `dist/`.
+
+### Create the macOS DMG installer
+
+```bash
+make dist/ActivityWatch.dmg
+```
+
+The `.dmg` is placed in `dist/`. Distribute this file to end users — they drag `ActivityWatch.app` to `/Applications` and launch it. On first run a dialog prompts for their PCD email address; syncing runs silently in the background from that point on.
+
+### Environment summary
+
+| `PCD_ENV` | PCD API base URL |
+|-----------|-----------------|
+| `local`   | `http://127.0.0.1:8005` |
+| `dev`     | `https://api-dev.prescribingcaredirect.co.uk` |
+| `qa`      | `https://api-qa.prescribingcaredirect.co.uk` |
+| `prod`    | `https://api.prescribingcaredirect.co.uk` |
+
+The `PCD_APP_SECRET` value must match the `ACTIVITYWATCH_APP_SECRET` environment variable configured in the PCD backend for the target environment.
+
 ## Contributing
 
 Want to help? Great! Check out the [CONTRIBUTING.md file](./CONTRIBUTING.md)!
@@ -273,4 +349,6 @@ Want to help? Great! Check out the [CONTRIBUTING.md file](./CONTRIBUTING.md)!
 ## Questions and support
 
 Have a question, suggestion, problem, or just want to say hi? Post on [the forum](https://forum.activitywatch.net/)!
+
+
 

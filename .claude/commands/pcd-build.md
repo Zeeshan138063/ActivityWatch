@@ -24,7 +24,24 @@ The build is environment-agnostic — no environment is baked in at compile time
 
 5. **macOS only:** Run `make dist/ActivityWatch.dmg` to produce the installer. Report the final path `dist/ActivityWatch.dmg`.
 
-6. **Windows only:** The EXE is already placed in `dist/` by PyInstaller. Report the path `dist/ActivityWatch/ActivityWatch.exe`.
+6. **Windows only:** PyInstaller cannot cross-compile — the Windows EXE must be built on a Windows machine. Print the following instructions for the user and stop (do not attempt to run these locally):
+
+   ```powershell
+   git clone https://github.com/Zeeshan138063/ActivityWatch.git
+   cd ActivityWatch
+   git submodule update --init --recursive
+
+   python -m venv venv
+   venv\Scripts\activate
+   pip install setuptools
+   make build
+
+   $env:PCD_APP_SECRET="ACTIVITYWATCH_APP_SECRET"
+   venv\Scripts\pyinstaller --clean --noconfirm aw.spec
+   ```
+
+   Output will be at `dist\ActivityWatch\ActivityWatch.exe`.
+   Note: replace `ACTIVITYWATCH_APP_SECRET` with the real secret if it differs.
 
 7. Remove the user config file to ensure the first run prompts for the PCD email:
    ```

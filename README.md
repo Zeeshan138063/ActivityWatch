@@ -336,8 +336,8 @@ The `.dmg` is placed in `dist/`. Distribute this file to end users — they drag
 | `PCD_ENV` | PCD API base URL |
 |-----------|-----------------|
 | `local`   | `http://127.0.0.1:8005` |
-| `dev`     | `https://api-dev.prescribingcaredirect.co.uk` |
-| `qa`      | `https://api-qa.prescribingcaredirect.co.uk` |
+| `dev`     | `https://api.dev.prescribingcaredirect.co.uk` |
+| `qa`      | `https://api.qa.prescribingcaredirect.co.uk` |
 | `prod`    | `https://api.prescribingcaredirect.co.uk` |
 
 The `PCD_APP_SECRET` value must match the `ACTIVITYWATCH_APP_SECRET` environment variable configured in the PCD backend for the target environment.

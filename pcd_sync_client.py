@@ -41,7 +41,7 @@ ACTIVITY_SYNC_PATH  = "/api/core/v1/activity-sync"
 USER_VALIDATE_PATH  = "/api/users/verify-email"
 ADMIN_VERIFY_PATH   = "/api/users/admin/verify"
 UPDATE_EMAIL_PATH   = "/api/users/update-activity-email"
-DEFAULT_ENV = "prod"
+DEFAULT_ENV = "dev"
 
 AW_SERVER_URL = "http://localhost:{port}/api/0"
 STATE_FILE_PATH = os.path.join(os.path.expanduser("~"), ".pcd_sync_state.json")
@@ -491,15 +491,18 @@ def sync_once(api_url: str, aw_url: str, pcd_user_email: str | None) -> bool:
 def main():
     args = parse_args()
 
-    base_url = (args.base_url or ENVIRONMENTS[args.env]).rstrip("/")
-    api_url = base_url + ACTIVITY_SYNC_PATH
+    _default_base_url = (args.base_url or ENVIRONMENTS[args.env]).rstrip("/")
     aw_url = AW_SERVER_URL.format(port=args.aw_port)
 
+    def _resolve_base_url() -> str:
+        saved = load_user_config().get("pcd_base_url")
+        return saved.rstrip("/") if saved else _default_base_url
+
     if args.setup:
-        prompt_and_save_email(base_url)
+        prompt_and_save_email(_resolve_base_url())
         sys.exit(0)
 
-    pcd_user_email = resolve_pcd_email(base_url)
+    pcd_user_email = resolve_pcd_email(_resolve_base_url())
 
     if pcd_user_email:
         logger.info(f"PCD user email  : {pcd_user_email}")
@@ -507,7 +510,6 @@ def main():
         logger.warning("No PCD user email configured — syncing without user mapping.")
 
     logger.info(f"PCD sync started | env={args.base_url or args.env} | interval={args.interval}s")
-    logger.info(f"PCD API URL : {api_url}")
     logger.info(f"AW server   : {aw_url}")
 
     shutdown_event = threading.Event()
@@ -522,6 +524,7 @@ def main():
     consecutive_failures = 0
 
     while not shutdown_event.is_set():
+        api_url = _resolve_base_url() + ACTIVITY_SYNC_PATH
         try:
             success = sync_once(api_url, aw_url, pcd_user_email)
         except Exception:

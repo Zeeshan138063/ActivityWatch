@@ -80,6 +80,8 @@ build: aw-core/.git
 	make --directory=aw-core build
 #	Needed to ensure that the server has the correct version set
 	python -c "import aw_server; print(aw_server.__version__)"
+#	Install aw-pcd-sync entry point so aw-qt can auto-start pcd_sync_client.py
+	python -c "import sys,os; src=os.path.abspath('pcd_sync_client.py'); t=os.path.join(os.path.dirname(sys.executable),'aw-pcd-sync'); open(t,'w').write('#!/bin/sh\nexec \"'+sys.executable+'\" \"'+src+'\" \"'+chr(36)+'@\"\n'); os.chmod(t,0o755); print('Installed '+t)"
 
 
 # Install

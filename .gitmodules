@@ -6,13 +6,13 @@
 	url = https://github.com/ActivityWatch/aw-client.git
 [submodule "aw-server"]
 	path = aw-server
-	url = https://github.com/ActivityWatch/aw-server.git
+	url = https://github.com/Zeeshan138063/aw-server.git
 [submodule "aw-watcher-afk"]
 	path = aw-watcher-afk
 	url = https://github.com/ActivityWatch/aw-watcher-afk.git
 [submodule "aw-qt"]
 	path = aw-qt
-	url = https://github.com/ActivityWatch/aw-qt.git
+	url = https://github.com/Zeeshan138063/aw-qt.git
 [submodule "aw-watcher-window"]
 	path = aw-watcher-window
 	url = https://github.com/ActivityWatch/aw-watcher-window.git

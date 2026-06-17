@@ -12,6 +12,7 @@ import subprocess
 import sys
 import threading
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import requests
 
@@ -46,6 +47,8 @@ DEFAULT_ENV = "dev"
 AW_SERVER_URL = "http://localhost:{port}/api/0"
 STATE_FILE_PATH = os.path.join(os.path.expanduser("~"), ".pcd_sync_state.json")
 USER_CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".pcd_sync_config.json")
+LOG_FILE_PATH = os.path.join(os.path.expanduser("~"), ".pcd_sync_log.json")
+MAX_LOG_ENTRIES = 200
 
 # Only these bucket prefixes are synced — pattern: <watcher-name>_<hostname>
 WATCHED_BUCKET_PREFIXES = ("aw-watcher-window_", "aw-watcher-afk_")
@@ -393,6 +396,28 @@ def save_state(state: dict) -> None:
         logger.error(f"Failed to save state file: {e}")
 
 
+def append_sync_log(level: str, message: str, detail: str | None = None) -> None:
+    entry: dict = {
+        "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "level": level,
+        "msg": message,
+    }
+    if detail:
+        entry["detail"] = detail
+    try:
+        try:
+            entries = json.loads(Path(LOG_FILE_PATH).read_text())
+            if not isinstance(entries, list):
+                entries = []
+        except Exception:
+            entries = []
+        entries.insert(0, entry)
+        entries = entries[:MAX_LOG_ENTRIES]
+        Path(LOG_FILE_PATH).write_text(json.dumps(entries, indent=2))
+    except Exception as e:
+        logger.debug(f"Could not write sync log: {e}")
+
+
 def fetch_buckets(aw_url: str) -> dict | None:
     try:
         res = requests.get(f"{aw_url}/buckets/", timeout=10)
@@ -511,6 +536,7 @@ def main():
 
     logger.info(f"PCD sync started | env={args.base_url or args.env} | interval={args.interval}s")
     logger.info(f"AW server   : {aw_url}")
+    append_sync_log("info", f"PCD sync started (interval={args.interval}s)")
 
     shutdown_event = threading.Event()
 
@@ -534,12 +560,18 @@ def main():
         if success:
             consecutive_failures = 0
             wait_secs = args.interval
+            append_sync_log("success", f"Sync successful → {api_url}")
         else:
             consecutive_failures += 1
             wait_secs = min(args.interval * (2 ** (consecutive_failures - 1)), MAX_BACKOFF_SECS)
             logger.warning(
                 f"Sync failed {consecutive_failures} time(s) in a row. "
                 f"Retrying in {wait_secs}s."
+            )
+            append_sync_log(
+                "error",
+                f"Sync failed (attempt {consecutive_failures}) → {api_url}",
+                f"Retrying in {wait_secs}s",
             )
 
         shutdown_event.wait(wait_secs)

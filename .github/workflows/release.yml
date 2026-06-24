@@ -625,7 +625,7 @@ jobs:
           submodules: 'recursive'
           fetch-depth: 0
 
-      - uses: ActivityWatch/check-version-format-action@v2
+      - uses: ActivityWatch/check-version-format-action@v3
         id: version
         with:
           prefix: 'v'
@@ -673,7 +673,7 @@ jobs:
         run: ls -R
         working-directory: dist
 
-      - uses: ActivityWatch/check-version-format-action@v2
+      - uses: ActivityWatch/check-version-format-action@v3
         id: version
         with:
           prefix: 'v'

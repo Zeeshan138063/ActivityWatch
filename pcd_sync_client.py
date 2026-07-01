@@ -42,7 +42,7 @@ ACTIVITY_SYNC_PATH  = "/api/core/v1/activity-sync"
 USER_VALIDATE_PATH  = "/api/users/verify-email"
 ADMIN_VERIFY_PATH   = "/api/users/admin/verify"
 UPDATE_EMAIL_PATH   = "/api/users/update-activity-email"
-DEFAULT_ENV = "dev"
+DEFAULT_ENV = "qa"
 
 AW_SERVER_URL = "http://localhost:{port}/api/0"
 STATE_FILE_PATH = os.path.join(os.path.expanduser("~"), ".pcd_sync_state.json")

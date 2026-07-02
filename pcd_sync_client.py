@@ -487,9 +487,6 @@ def sync_once(api_url: str, aw_url: str, pcd_user_email: str | None) -> bool:
                     datetime.fromisoformat(last_ev["timestamp"].replace("Z", "+00:00"))
                     + timedelta(seconds=float(last_ev["duration"]))
                 )
-                # Pulsetime can push the event end into the future — cap at now
-                # so the cursor never skips past unrecorded events.
-                last_end_dt = min(last_end_dt, datetime.now(timezone.utc))
                 last_end = last_end_dt.isoformat()
             except Exception:
                 last_end = last_ev["timestamp"]
@@ -511,11 +508,7 @@ def sync_once(api_url: str, aw_url: str, pcd_user_email: str | None) -> bool:
 
     if not has_new_events:
         logger.debug("No new activity data this cycle.")
-        # Still save cursor advances for buckets whose events were all filtered
-        # (e.g. all AFK events were not-afk) so we don't re-fetch them next cycle.
-        if new_state != state:
-            save_state(new_state)
-        return None  # nothing to send — not a failure, not a success
+        return True
 
     logger.info(f"Posting payload to {api_url} ...")
     try:
@@ -578,14 +571,10 @@ def main():
             logger.exception("Unexpected error during sync")
             success = False
 
-        if success is True:
+        if success:
             consecutive_failures = 0
             wait_secs = args.interval
             append_sync_log("success", f"Sync successful → {api_url}")
-        elif success is None:
-            # No new events this cycle — not a failure, don't log to admin panel
-            consecutive_failures = 0
-            wait_secs = args.interval
         else:
             consecutive_failures += 1
             wait_secs = min(args.interval * (2 ** (consecutive_failures - 1)), MAX_BACKOFF_SECS)

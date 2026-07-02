@@ -483,10 +483,14 @@ def sync_once(api_url: str, aw_url: str, pcd_user_email: str | None) -> bool:
             # doesn't re-fetch the same event (start timestamp is inclusive).
             last_ev = events[-1]
             try:
-                last_end = (
+                last_end_dt = (
                     datetime.fromisoformat(last_ev["timestamp"].replace("Z", "+00:00"))
                     + timedelta(seconds=float(last_ev["duration"]))
-                ).isoformat()
+                )
+                # Pulsetime can push the event end into the future — cap at now
+                # so the cursor never skips past unrecorded events.
+                last_end_dt = min(last_end_dt, datetime.now(timezone.utc))
+                last_end = last_end_dt.isoformat()
             except Exception:
                 last_end = last_ev["timestamp"]
             new_state[bucket_id] = last_end

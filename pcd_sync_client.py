@@ -507,6 +507,10 @@ def sync_once(api_url: str, aw_url: str, pcd_user_email: str | None) -> bool:
 
     if not has_new_events:
         logger.debug("No new activity data this cycle.")
+        # Still save cursor advances for buckets whose events were all filtered
+        # (e.g. all AFK events were not-afk) so we don't re-fetch them next cycle.
+        if new_state != state:
+            save_state(new_state)
         return None  # nothing to send — not a failure, not a success
 
     logger.info(f"Posting payload to {api_url} ...")

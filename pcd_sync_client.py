@@ -477,19 +477,31 @@ def sync_once(api_url: str, aw_url: str, pcd_user_email: str | None) -> bool:
         logger.debug(f"Fetching events for {bucket_id} since {last_sync}")
         events = fetch_new_events(aw_url, bucket_id, last_sync)
 
-        if bucket_id.startswith("aw-watcher-afk_"):
-            events = [e for e in events if e.get("data", {}).get("status") == "afk"]
-
         if events:
             events.sort(key=lambda x: x["timestamp"])
-            sync_data["buckets"][bucket_id] = {
-                "type": b_type,
-                "client": bucket_info.get("client"),
-                "events": events,
-            }
-            new_state[bucket_id] = events[-1]["timestamp"]
-            has_new_events = True
-            logger.info(f"Found {len(events)} new events for {bucket_id}")
+            # Advance cursor to the END of the last event so next fetch
+            # doesn't re-fetch the same event (start timestamp is inclusive).
+            last_ev = events[-1]
+            try:
+                last_end = (
+                    datetime.fromisoformat(last_ev["timestamp"].replace("Z", "+00:00"))
+                    + timedelta(seconds=float(last_ev["duration"]))
+                ).isoformat()
+            except Exception:
+                last_end = last_ev["timestamp"]
+            new_state[bucket_id] = last_end
+
+            if bucket_id.startswith("aw-watcher-afk_"):
+                events = [e for e in events if e.get("data", {}).get("status") == "afk"]
+
+            if events:
+                sync_data["buckets"][bucket_id] = {
+                    "type": b_type,
+                    "client": bucket_info.get("client"),
+                    "events": events,
+                }
+                has_new_events = True
+                logger.info(f"Found {len(events)} new events for {bucket_id}")
         else:
             logger.debug(f"No new events for {bucket_id}")
 

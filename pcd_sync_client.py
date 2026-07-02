@@ -507,7 +507,7 @@ def sync_once(api_url: str, aw_url: str, pcd_user_email: str | None) -> bool:
 
     if not has_new_events:
         logger.debug("No new activity data this cycle.")
-        return True
+        return None  # nothing to send — not a failure, not a success
 
     logger.info(f"Posting payload to {api_url} ...")
     try:
@@ -570,10 +570,14 @@ def main():
             logger.exception("Unexpected error during sync")
             success = False
 
-        if success:
+        if success is True:
             consecutive_failures = 0
             wait_secs = args.interval
             append_sync_log("success", f"Sync successful → {api_url}")
+        elif success is None:
+            # No new events this cycle — not a failure, don't log to admin panel
+            consecutive_failures = 0
+            wait_secs = args.interval
         else:
             consecutive_failures += 1
             wait_secs = min(args.interval * (2 ** (consecutive_failures - 1)), MAX_BACKOFF_SECS)

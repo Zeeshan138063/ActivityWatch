@@ -563,6 +563,7 @@ def main():
 
     while not shutdown_event.is_set():
         api_url = _resolve_base_url() + ACTIVITY_SYNC_PATH
+        pcd_user_email = load_user_config().get("pcd_user_email")
         try:
             success = sync_once(api_url, aw_url, pcd_user_email)
         except Exception:

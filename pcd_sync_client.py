@@ -494,6 +494,15 @@ def sync_once(api_url: str, aw_url: str, pcd_user_email: str | None) -> bool:
 
             if bucket_id.startswith("aw-watcher-afk_"):
                 events = [e for e in events if e.get("data", {}).get("status") == "afk"]
+                # AFK watcher sends heartbeats every 5s — each heartbeat updates
+                # the same event's duration, producing many rows with identical
+                # start timestamps. Keep only the longest-duration version of each.
+                by_ts: dict = {}
+                for e in events:
+                    ts = e["timestamp"]
+                    if ts not in by_ts or e["duration"] > by_ts[ts]["duration"]:
+                        by_ts[ts] = e
+                events = list(by_ts.values())
 
             if events:
                 sync_data["buckets"][bucket_id] = {

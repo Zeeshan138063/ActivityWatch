@@ -6,6 +6,7 @@ import getpass
 import json
 import logging
 import os
+import platform
 import signal
 import socket
 import subprocess
@@ -55,6 +56,52 @@ WATCHED_BUCKET_PREFIXES = ("aw-watcher-window_", "aw-watcher-afk_")
 
 # Backoff: doubles on each consecutive failure, capped at this many seconds
 MAX_BACKOFF_SECS = 600  # 10 minutes
+
+def is_vpn_connected() -> bool:
+    """Return True if any VPN is actively connected."""
+    try:
+        system = platform.system()
+        if system == "Darwin":
+            result = subprocess.run(
+                ["scutil", "--nc", "list"], capture_output=True, text=True, timeout=5
+            )
+            if any("(Connected)" in line for line in result.stdout.splitlines()):
+                return True
+            ifc = subprocess.run(
+                ["ifconfig"], capture_output=True, text=True, timeout=5
+            )
+            current_iface = ""
+            for line in ifc.stdout.splitlines():
+                if line and not line[0].isspace():
+                    current_iface = line.split(":")[0]
+                elif current_iface.startswith("utun") and "-->" in line:
+                    return True
+            return False
+        elif system == "Linux":
+            result = subprocess.run(
+                ["ip", "link", "show"], capture_output=True, text=True, timeout=5,
+            )
+            _vpn_prefixes = ("tun", "tap", "wg", "vpn")
+            for line in result.stdout.splitlines():
+                parts = line.split(":", 2)
+                if len(parts) >= 2:
+                    name = parts[1].strip().lower().split("@")[0]
+                    if any(name.startswith(p) for p in _vpn_prefixes) and "UP" in line:
+                        return True
+            return False
+        else:  # Windows
+            result = subprocess.run(
+                [
+                    "powershell", "-NoProfile", "-Command",
+                    "Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } "
+                    "| Select-Object -ExpandProperty InterfaceDescription",
+                ],
+                capture_output=True, text=True, timeout=5,
+            )
+            out = result.stdout.lower()
+            return any(kw in out for kw in ("wireguard", "vpn", "tap-windows", "openvpn"))
+    except Exception:
+        return False
 
 
 def parse_args():
@@ -571,7 +618,20 @@ def main():
 
     consecutive_failures = 0
 
+    _vpn_was_connected: bool | None = None
+
     while not shutdown_event.is_set():
+        vpn_on = is_vpn_connected()
+        if not vpn_on:
+            if _vpn_was_connected is not False:
+                logger.info("VPN not connected — pausing sync.")
+                _vpn_was_connected = False
+            shutdown_event.wait(30)
+            continue
+        if _vpn_was_connected is False:
+            logger.info("VPN connected — resuming sync.")
+        _vpn_was_connected = True
+
         api_url = _resolve_base_url() + ACTIVITY_SYNC_PATH
         pcd_user_email = load_user_config().get("pcd_user_email")
         try:

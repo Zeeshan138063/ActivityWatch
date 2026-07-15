@@ -339,6 +339,8 @@ jobs:
           pip3 install poetry==1.4.2
 
       - name: Build
+        env:
+          PCD_APP_SECRET: ${{ secrets.PCD_APP_SECRET }}
         run: |
           python3 -m venv venv
           source venv/bin/activate || source venv/Scripts/activate
@@ -358,6 +360,8 @@ jobs:
           make test-integration
 
       - name: Package
+        env:
+          PCD_APP_SECRET: ${{ secrets.PCD_APP_SECRET }}
         run: |
           source venv/bin/activate || source venv/Scripts/activate
           poetry install
@@ -536,6 +540,8 @@ jobs:
 
       - name: Build
         uses: nick-fields/retry@v4
+        env:
+          PCD_APP_SECRET: ${{ secrets.PCD_APP_SECRET }}
         with:
           timeout_minutes: 60
           max_attempts: 3
@@ -558,6 +564,8 @@ jobs:
             make test SKIP_SERVER_RUST=${{ matrix.skip_rust }}
 
       - name: Package
+        env:
+          PCD_APP_SECRET: ${{ secrets.PCD_APP_SECRET }}
         run: |
           source venv/bin/activate || source venv/Scripts/activate
           poetry install

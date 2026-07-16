@@ -37,7 +37,7 @@ ENVIRONMENTS = {
     "local": "http://127.0.0.1:8005",
     "dev":   "https://api.dev.prescribingcaredirect.co.uk",
     "qa":    "https://api.qa.prescribingcaredirect.co.uk",
-    "prod":  "https://app.prescribingcaredirect.co.uk",
+    "prod":  "https://api.prescribingcaredirect.co.uk",
 }
 ACTIVITY_SYNC_PATH  = "/api/core/v1/activity-sync"
 USER_VALIDATE_PATH  = "/api/users/verify-email"

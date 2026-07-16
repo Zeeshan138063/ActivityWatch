@@ -37,13 +37,13 @@ ENVIRONMENTS = {
     "local": "http://127.0.0.1:8005",
     "dev":   "https://api.dev.prescribingcaredirect.co.uk",
     "qa":    "https://api.qa.prescribingcaredirect.co.uk",
-    "prod":  "https://api.qa.prescribingcaredirect.co.uk",
+    "prod":  "https://app.prescribingcaredirect.co.uk",
 }
 ACTIVITY_SYNC_PATH  = "/api/core/v1/activity-sync"
 USER_VALIDATE_PATH  = "/api/users/verify-email"
 ADMIN_VERIFY_PATH   = "/api/users/admin/verify"
 UPDATE_EMAIL_PATH   = "/api/users/update-activity-email"
-DEFAULT_ENV = "qa"
+DEFAULT_ENV = "prod"
 
 AW_SERVER_URL = "http://localhost:{port}/api/0"
 STATE_FILE_PATH = os.path.join(os.path.expanduser("~"), ".pcd_sync_state.json")

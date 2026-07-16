@@ -8,8 +8,6 @@ name: Release
 #   - tag push: run both build matrices, generate release notes, and publish one draft release
 
 on:
-  schedule:
-    - cron: '0 12 * * 4'
   workflow_dispatch:
     inputs:
       release_line:
@@ -20,12 +18,6 @@ on:
         options:
           - patch
           - minor
-  push:
-    branches: [master]
-    tags:
-      - v*
-  pull_request:
-    branches: [master]
 
 permissions:
   contents: write

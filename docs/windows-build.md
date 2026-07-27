@@ -19,13 +19,26 @@
 
 ---
 
-## Step 1 — Clone the repo
+## Step 1 — Get the code
 
+### First build on this machine — clone fresh
 ```bat
-git clone --recursive git@github.com:Zeeshan138063/ActivityWatch.git
+git clone --recursive https://github.com/Zeeshan138063/ActivityWatch.git
 cd ActivityWatch
 git submodule update --init --recursive
 ```
+
+### Already have the repo — pull the latest
+```bat
+cd ActivityWatch
+git checkout master
+git pull origin master
+git submodule update --init --recursive
+```
+
+> ⚠️ The UI lives in nested submodules (`aw-server` → `aw-webui`). If you skip
+> `git submodule update --init --recursive`, the build will use the OLD UI even
+> though `master` is up to date.
 
 ---
 
@@ -87,6 +100,22 @@ del %USERPROFILE%\.pcd_sync_state.json
 gh auth login
 gh release upload v0.14.0b3 dist\ActivityWatch-Setup.exe --repo Zeeshan138063/ActivityWatch
 ```
+
+---
+
+## Step 8 — Verify the build
+
+After launching `ActivityWatch.exe`, confirm the latest fixes are present:
+
+- **UI:** open `http://localhost:5600` → **PCD Admin** is the first nav item, and
+  the environment defaults to **Prod** (`https://api.prescribingcaredirect.co.uk`).
+- **No console flashing:** the black PowerShell window must NOT pop up every ~30s
+  (fixed via `CREATE_NO_WINDOW` on the VPN check).
+- **VPN notifications:** toggle the VPN off/on → a Windows toast appears
+  ("Tracking paused / resumed"). Allow notifications if Windows prompts on first launch.
+
+If the UI still looks old, you almost certainly skipped
+`git submodule update --init --recursive` in Step 1 — re-run it and rebuild.
 
 ---
 

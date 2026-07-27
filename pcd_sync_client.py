@@ -57,6 +57,9 @@ WATCHED_BUCKET_PREFIXES = ("aw-watcher-window_", "aw-watcher-afk_")
 # Backoff: doubles on each consecutive failure, capped at this many seconds
 MAX_BACKOFF_SECS = 600  # 10 minutes
 
+# On Windows, prevent a console window from flashing on every subprocess poll.
+_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
 def is_vpn_connected() -> bool:
     """Return True if any VPN is actively connected."""
     try:
@@ -97,6 +100,7 @@ def is_vpn_connected() -> bool:
                     "| Select-Object -ExpandProperty InterfaceDescription",
                 ],
                 capture_output=True, text=True, timeout=5,
+                creationflags=_NO_WINDOW,
             )
             out = result.stdout.lower()
             return any(kw in out for kw in ("wireguard", "vpn", "tap-windows", "openvpn"))
@@ -540,16 +544,12 @@ def sync_once(api_url: str, aw_url: str, pcd_user_email: str | None) -> bool:
             new_state[bucket_id] = last_end
 
             if bucket_id.startswith("aw-watcher-afk_"):
+                # Keep only "afk" slices. aw-server clips the growing AFK event
+                # to the query window, so each pass yields one contiguous,
+                # non-overlapping slice. The PCD backend union-merges these
+                # slices into true idle intervals (single source of truth), so
+                # no lossy client-side merge is applied here.
                 events = [e for e in events if e.get("data", {}).get("status") == "afk"]
-                # AFK watcher sends heartbeats every 5s — each heartbeat updates
-                # the same event's duration, producing many rows with identical
-                # start timestamps. Keep only the longest-duration version of each.
-                by_ts: dict = {}
-                for e in events:
-                    ts = e["timestamp"]
-                    if ts not in by_ts or e["duration"] > by_ts[ts]["duration"]:
-                        by_ts[ts] = e
-                events = list(by_ts.values())
 
             if events:
                 sync_data["buckets"][bucket_id] = {
